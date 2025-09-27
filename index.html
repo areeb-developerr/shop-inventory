@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self'; 
+        script-src 'self' 'unsafe-inline' 'unsafe-eval'; 
+        style-src 'self' 'unsafe-inline'; 
+        img-src 'self' data: blob:; 
+        font-src 'self'; 
+        connect-src 'self' http://localhost:* ws://localhost:*;
+    " />
+    <title>Shop Inventory</title>
+    <link rel="preconnect" href="http://localhost:5000" crossorigin>
+    <script>
+        // Preload theme early to avoid repaint and FOUC
+        try {
+            const saved = localStorage.getItem('shopflow-dark-mode');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const isDark = saved === 'true' || (saved === null && prefersDark);
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                document.body && document.body.classList.add('bg-gray-900');
+            }
+        } catch (e) {}
+    </script>
+    <style>
+        /* Prevent flash of unstyled content */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+        }
+
+        #root {
+            min-height: 100vh;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+    <div id="root">
+        <!-- Loading indicator -->
+        <div id="loading" style="
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #6b7280;
+            font-family: system-ui, sans-serif;
+        ">
+            Loading...
+        </div>
+    </div>
+    <script type="module" src="src/main.jsx"></script>
+    <script>
+        // Remove loading indicator once React loads
+        window.addEventListener('load', function () {
+            setTimeout(() => {
+                const loading = document.getElementById('loading');
+                if (loading) loading.remove();
+            }, 1000);
+        });
+    </script>
+</body>
+
+</html>
