@@ -13,6 +13,7 @@ import {
   PieChart,
   LineChart,
   RefreshCw,
+  Info,
 } from "lucide-react";
 import { api } from "../services/api.js";
 import {
@@ -370,6 +371,7 @@ export default function Analytics() {
             { id: "products", label: "Products", icon: Package },
             { id: "customers", label: "Customers", icon: Users },
             { id: "profit", label: "Profit", icon: DollarSign },
+            { id: "about", label: "About", icon: Info },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
