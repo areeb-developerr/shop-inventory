@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
 import { toPaisa } from "../lib/format";
-import { PageHeader, Money, Loading, ErrorBox } from "../components/shared";
+import { PageHeader, Money, Loading, ErrorBox, FormField, Select, Textarea, MoneyInput, SearchInput, QtyInput } from "../components/shared";
+import { validateMoney, validateQty, clampQty, parseQty } from "../lib/validate";
 
 export default function NewSale({ setTab }) {
   const { data: products, loading: loadingProducts } = useAsync(() => api.products.list(), []);
@@ -17,6 +18,7 @@ export default function NewSale({ setTab }) {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const cashAccount = accounts?.find((a) => a.type === "cash" && a.is_default) || accounts?.find((a) => a.type === "cash");
   const bankAccount = accounts?.find((a) => a.type === "bank");
@@ -34,11 +36,13 @@ export default function NewSale({ setTab }) {
   const due = subtotal - paid;
 
   const addToCart = (product) => {
+    if (product.stock_qty <= 0) return;
     const existing = cart.find((c) => c.productId === product.id);
     if (existing) {
+      const nextQty = Math.min(existing.qty + 1, product.stock_qty);
       setCart(cart.map((c) =>
         c.productId === product.id
-          ? { ...c, qty: c.qty + 1, lineTotal: Math.round((c.qty + 1) * c.unitPrice) }
+          ? { ...c, qty: nextQty, lineTotal: Math.round(nextQty * c.unitPrice) }
           : c
       ));
     } else {
@@ -51,36 +55,62 @@ export default function NewSale({ setTab }) {
         maxStock: product.stock_qty,
       }]);
     }
-    setSearch("");
   };
 
-  const updateQty = (productId, qty) => {
-    const n = Math.max(0, Number(qty));
-    if (n === 0) {
+  const updateQty = (productId, rawQty) => {
+    const item = cart.find((c) => c.productId === productId);
+    if (!item) return;
+    const str = String(rawQty).trim();
+    if (!str) {
+      setCart(cart.map((c) => c.productId === productId ? { ...c, qty: "" } : c));
+      return;
+    }
+    const n = parseQty(str);
+    if (Number.isNaN(n) || n <= 0) {
       setCart(cart.filter((c) => c.productId !== productId));
       return;
     }
+    const clamped = clampQty(n, 0.01, item.maxStock);
     setCart(cart.map((c) =>
       c.productId === productId
-        ? { ...c, qty: n, lineTotal: Math.round(n * c.unitPrice) }
+        ? { ...c, qty: clamped, lineTotal: Math.round(clamped * c.unitPrice) }
         : c
     ));
   };
 
-  const payFullCash = () => {
-    setCashAmount((subtotal / 100).toFixed(0));
-    setBankAmount("");
-  };
-
-  const payFullUdhar = () => {
-    setCashAmount("");
-    setBankAmount("");
+  const validateSale = () => {
+    const e = {};
+    if (!cart.length) {
+      setError("Add at least one item to the sale");
+      return false;
+    }
+    for (const c of cart) {
+      const qtyErr = validateQty(c.qty, { min: 0.01, max: c.maxStock, fieldName: `${c.name} quantity` });
+      if (qtyErr) {
+        e.cart = qtyErr;
+        break;
+      }
+    }
+    const cashErr = validateMoney(cashAmount, { min: 0, fieldName: "Cash amount" });
+    if (cashErr) e.cash = cashErr;
+    const bankErr = validateMoney(bankAmount, { min: 0, fieldName: "Bank amount" });
+    if (bankErr) e.bank = bankErr;
+    if (cashPaisa > 0 && !cashAccount) e.cash = "No cash account configured";
+    if (bankPaisa > 0 && !bankAccount) e.bank = "No bank account configured";
+    if (due > 0 && !customerId) e.customer = "Select a customer for udhar (credit) sales";
+    if (due < 0) e.payment = "Total paid cannot exceed sale amount";
+    if (subtotal > 0 && paid === 0 && !customerId) e.customer = "Select a customer for full udhar sale";
+    setFieldErrors(e);
+    if (Object.keys(e).length) {
+      setError(e.cart || e.payment || e.customer || e.cash || e.bank || "Please fix the errors below");
+      return false;
+    }
+    setError("");
+    return true;
   };
 
   const submit = async () => {
-    setError("");
-    if (!cart.length) return setError("Add items to cart");
-    if (due > 0 && !customerId) return setError("Select customer for udhar");
+    if (!validateSale()) return;
     setSaving(true);
     try {
       await api.sales.create({
@@ -97,12 +127,25 @@ export default function NewSale({ setTab }) {
       setBankAmount("");
       setNotes("");
       setCustomerId("");
+      setFieldErrors({});
       setTab("invoices");
     } catch (err) {
       setError(err.message);
     } finally {
       setSaving(false);
     }
+  };
+
+  const payFullCash = () => {
+    setCashAmount(subtotal > 0 ? String(Math.round(subtotal / 100)) : "");
+    setBankAmount("");
+    setFieldErrors({});
+  };
+
+  const payFullUdhar = () => {
+    setCashAmount("");
+    setBankAmount("");
+    setFieldErrors({});
   };
 
   if (loadingProducts) return <Loading />;
@@ -115,28 +158,39 @@ export default function NewSale({ setTab }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <input
-            className="input"
-            placeholder="Search product to add…"
+          <SearchInput
+            placeholder="Search products…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoFocus
           />
-          {search && (
-            <div className="card divide-y divide-slate-100 dark:divide-slate-700 max-h-48 overflow-y-auto">
-              {filtered.slice(0, 8).map((p) => (
+          <div className="card divide-y divide-slate-100 dark:divide-slate-700 max-h-64 overflow-y-auto">
+            {!products?.length ? (
+              <p className="px-4 py-6 text-center text-slate-500 text-sm">
+                No items in catalog. Add products from the Items page first.
+              </p>
+            ) : filtered.length === 0 ? (
+              <p className="px-4 py-6 text-center text-slate-500 text-sm">No products match your search</p>
+            ) : (
+              filtered.map((p) => (
                 <button
                   key={p.id}
                   type="button"
-                  className="w-full flex justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-left"
+                  className="w-full flex justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-left disabled:opacity-40"
                   onClick={() => addToCart(p)}
+                  disabled={p.stock_qty <= 0}
                 >
-                  <span>{p.name} <span className="text-slate-400 text-sm">({p.stock_qty} in stock)</span></span>
+                  <span>
+                    {p.name}{" "}
+                    <span className={`text-sm ${p.stock_qty <= 0 ? "text-red-400" : "text-slate-400"}`}>
+                      ({p.stock_qty} in stock)
+                    </span>
+                  </span>
                   <Money amount={p.sell_price} />
                 </button>
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
 
           <div className="card">
             <div className="table-wrap border-0">
@@ -149,13 +203,13 @@ export default function NewSale({ setTab }) {
                     <tr key={c.productId}>
                       <td>{c.name}</td>
                       <td>
-                        <input
-                          type="number"
-                          className="input w-20"
+                        <QtyInput
+                          className="w-24"
                           value={c.qty}
-                          min={1}
-                          max={c.maxStock}
                           onChange={(e) => updateQty(c.productId, e.target.value)}
+                          onBlur={() => {
+                            if (!c.qty || parseQty(c.qty) <= 0) updateQty(c.productId, 1);
+                          }}
                         />
                       </td>
                       <td><Money amount={c.unitPrice} /></td>
@@ -166,7 +220,7 @@ export default function NewSale({ setTab }) {
                     </tr>
                   ))}
                   {!cart.length && (
-                    <tr><td colSpan={5} className="text-center text-slate-500 py-8">Search and add products</td></tr>
+                    <tr><td colSpan={5} className="text-center text-slate-500 py-8">Click a product above to add to sale</td></tr>
                   )}
                 </tbody>
               </table>
@@ -174,47 +228,47 @@ export default function NewSale({ setTab }) {
           </div>
         </div>
 
-        <div className="card p-5 space-y-4 h-fit">
-          <div>
-            <label className="label">Customer</label>
-            <select className="input" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-              <option value="">Walk-in</option>
+        <div className="card p-5 space-y-5 h-fit">
+          <FormField label="Customer" error={fieldErrors.customer}>
+            <Select value={customerId} onChange={(e) => { setCustomerId(e.target.value); setFieldErrors((f) => ({ ...f, customer: null })); }} error={fieldErrors.customer}>
+              <option value="">Walk-in customer</option>
               {customers?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
+            </Select>
+          </FormField>
 
-          <div className="text-lg font-semibold flex justify-between">
+          <div className="text-lg font-semibold flex justify-between py-1 border-y border-slate-100 dark:border-slate-700">
             <span>Subtotal</span>
             <Money amount={subtotal} />
           </div>
 
           <div className="flex gap-2">
-            <button type="button" className="btn-secondary text-sm flex-1" onClick={payFullCash}>Full Cash</button>
-            <button type="button" className="btn-secondary text-sm flex-1" onClick={payFullUdhar}>Full Udhar</button>
+            <button type="button" className="btn-secondary text-sm flex-1 h-9" onClick={payFullCash}>Full Cash</button>
+            <button type="button" className="btn-secondary text-sm flex-1 h-9" onClick={payFullUdhar}>Full Udhar</button>
           </div>
 
-          <div>
-            <label className="label">Cash received (Rs)</label>
-            <input type="number" className="input" value={cashAmount} onChange={(e) => setCashAmount(e.target.value)} />
-          </div>
-          <div>
-            <label className="label">Bank received (Rs)</label>
-            <input type="number" className="input" value={bankAmount} onChange={(e) => setBankAmount(e.target.value)} />
-          </div>
+          <FormField label="Cash received" hint="Amount paid in cash" error={fieldErrors.cash}>
+            <MoneyInput value={cashAmount} onChange={(e) => { setCashAmount(e.target.value); setFieldErrors((f) => ({ ...f, cash: null })); }} placeholder="0" error={fieldErrors.cash} />
+          </FormField>
+          <FormField label="Bank received" hint="Amount paid to bank account" error={fieldErrors.bank}>
+            <MoneyInput value={bankAmount} onChange={(e) => { setBankAmount(e.target.value); setFieldErrors((f) => ({ ...f, bank: null })); }} placeholder="0" error={fieldErrors.bank} />
+          </FormField>
 
           {due > 0 && (
-            <div className="text-amber-600 text-sm font-medium">
+            <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 text-amber-700 dark:text-amber-300 text-sm font-medium">
               Udhar: <Money amount={due} />
             </div>
           )}
-          {due < 0 && <div className="text-red-500 text-sm">Overpaid by <Money amount={-due} /></div>}
+          {due < 0 && (
+            <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-red-600 text-sm">
+              Overpaid by <Money amount={-due} />
+            </div>
+          )}
 
-          <div>
-            <label className="label">Notes</label>
-            <textarea className="input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
+          <FormField label="Notes">
+            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional note for this sale" />
+          </FormField>
 
-          <button className="btn-primary w-full" disabled={saving || !cart.length || due < 0} onClick={submit}>
+          <button className="btn-primary w-full h-11" disabled={saving || !cart.length} onClick={submit}>
             {saving ? "Saving…" : "Complete Sale"}
           </button>
         </div>

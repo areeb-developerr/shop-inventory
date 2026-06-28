@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
 import { formatDate } from "../lib/format";
-import { PageHeader, Money, Loading, ErrorBox, Modal } from "../components/shared";
+import { PageHeader, Money, Loading, ErrorBox, Modal, Input, SearchInput } from "../components/shared";
 
 export default function Invoices() {
   const [search, setSearch] = useState("");
@@ -28,10 +28,10 @@ export default function Invoices() {
         title="Invoices"
         subtitle="Sales history"
         actions={
-          <>
-            <input type="date" className="input max-w-[160px]" value={date} onChange={(e) => setDate(e.target.value)} />
-            <input className="input max-w-xs" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </>
+          <div className="toolbar">
+            <Input type="date" className="w-44" value={date} onChange={(e) => setDate(e.target.value)} />
+            <SearchInput className="w-52" placeholder="Search invoices…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
         }
       />
 

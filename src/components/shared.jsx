@@ -1,4 +1,119 @@
 import { fromPaisa } from "../lib/format";
+import { Search } from "lucide-react";
+import { sanitizeMoneyInput, sanitizeQtyInput } from "../lib/validate";
+
+function fieldClass(base, error, className) {
+  return [base, error ? "input-error" : "", className].filter(Boolean).join(" ");
+}
+
+export function FormField({ label, hint, required, error, children, className = "" }) {
+  return (
+    <div className={`form-field ${className}`}>
+      {label && (
+        <label className="label">
+          {label}
+          {required && <span className="text-red-500 ml-0.5">*</span>}
+        </label>
+      )}
+      {children}
+      {error ? (
+        <p className="field-error">{error}</p>
+      ) : (
+        hint && <p className="field-hint">{hint}</p>
+      )}
+    </div>
+  );
+}
+
+export function Input({ className = "", error, onWheel, ...props }) {
+  return (
+    <input
+      className={fieldClass("input", error, className)}
+      onWheel={props.type === "number" ? (e) => { e.currentTarget.blur(); onWheel?.(e); } : onWheel}
+      {...props}
+    />
+  );
+}
+
+export function InputSm({ className = "", error, ...props }) {
+  return (
+    <input
+      className={fieldClass("input input-sm input-numeric", error, className)}
+      inputMode={props.inputMode || "numeric"}
+      {...props}
+    />
+  );
+}
+
+export function Select({ className = "", error, children, ...props }) {
+  return (
+    <select className={fieldClass("input", error, className)} {...props}>
+      {children}
+    </select>
+  );
+}
+
+export function Textarea({ className = "", error, ...props }) {
+  return <textarea className={fieldClass("input", error, className)} {...props} />;
+}
+
+export function MoneyInput({ prefix = "Rs", className = "", error, value, onChange, allowNegative = false, ...props }) {
+  return (
+    <div className="input-group">
+      <span className="input-prefix">{prefix}</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        autoComplete="off"
+        className={fieldClass("input input-numeric", error, className)}
+        value={value}
+        onChange={(e) => {
+          let next = sanitizeMoneyInput(e.target.value);
+          if (!allowNegative) next = next.replace(/-/g, "");
+          onChange?.({ ...e, target: { ...e.target, value: next } });
+        }}
+        onWheel={(e) => e.currentTarget.blur()}
+        {...props}
+      />
+    </div>
+  );
+}
+
+export function QtyInput({ className = "", error, value, onChange, integer = false, ...props }) {
+  return (
+    <input
+      type="text"
+      inputMode={integer ? "numeric" : "decimal"}
+      autoComplete="off"
+      className={fieldClass("input input-numeric", error, className)}
+      value={value}
+      onChange={(e) => {
+        const next = sanitizeQtyInput(e.target.value, integer);
+        onChange?.({ ...e, target: { ...e.target, value: next } });
+      }}
+      onWheel={(e) => e.currentTarget.blur()}
+      {...props}
+    />
+  );
+}
+
+export function SearchInput({ className = "", ...props }) {
+  return (
+    <div className={`search-field ${className}`}>
+      <Search className="search-icon" />
+      <input type="search" className="input" {...props} />
+    </div>
+  );
+}
+
+export function Checkbox({ label, checked, onChange, className = "" }) {
+  return (
+    <label className={`checkbox-field ${className}`}>
+      <input type="checkbox" checked={checked} onChange={onChange} />
+      {label && <span className="checkbox-label">{label}</span>}
+    </label>
+  );
+}
 
 export function StatCard({ label, value, sub, accent = "emerald" }) {
   const colors = {
@@ -67,9 +182,13 @@ export function Modal({ open, onClose, title, children, wide }) {
         className={`card w-full ${wide ? "max-w-2xl" : "max-w-md"} p-6 max-h-[90vh] overflow-y-auto`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-100 dark:border-slate-700">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">
+          <button
+            onClick={onClose}
+            className="btn-ghost w-9 h-9 p-0 rounded-full text-lg"
+            aria-label="Close"
+          >
             ×
           </button>
         </div>

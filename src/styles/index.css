@@ -2,54 +2,175 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply antialiased text-slate-900 dark:text-slate-100;
+@layer base {
+  body {
+    @apply antialiased text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-900;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  /* class for text-based numeric inputs (no spinners) */
+  .input-numeric {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  input[type="search"]::-webkit-search-cancel-button {
+    cursor: pointer;
+  }
 }
 
-input, select, textarea, button {
-  @apply outline-none;
-}
+@layer components {
+  .card {
+    @apply bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-sm;
+  }
 
-.card {
-  @apply bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm;
-}
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 h-10 rounded-xl text-sm font-medium transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98];
+  }
 
-.btn {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50;
-}
+  .btn-primary {
+    @apply btn bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-500 hover:shadow-emerald-500/25;
+  }
 
-.btn-primary {
-  @apply btn bg-emerald-600 text-white hover:bg-emerald-700;
-}
+  .btn-secondary {
+    @apply btn bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/80;
+  }
 
-.btn-secondary {
-  @apply btn bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600;
-}
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-500;
+  }
 
-.btn-danger {
-  @apply btn bg-red-600 text-white hover:bg-red-700;
-}
+  .btn-ghost {
+    @apply btn h-9 px-3 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60;
+  }
 
-.input {
-  @apply w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm;
-}
+  /* ——— Form fields ——— */
+  .form-field {
+    @apply flex flex-col gap-1.5;
+  }
 
-.label {
-  @apply block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1;
-}
+  .label {
+    @apply text-sm font-medium text-slate-700 dark:text-slate-300;
+  }
 
-.table-wrap {
-  @apply overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700;
-}
+  .field-hint {
+    @apply text-xs text-slate-500 dark:text-slate-400 -mt-0.5;
+  }
 
-table.data-table {
-  @apply w-full text-sm;
-}
+  .field-error {
+    @apply text-xs text-red-600 dark:text-red-400 font-medium;
+  }
 
-table.data-table th {
-  @apply text-left px-4 py-3 bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-medium;
-}
+  .input-error {
+    @apply border-red-400 dark:border-red-500 focus:border-red-500 focus:ring-red-500/15;
+  }
 
-table.data-table td {
-  @apply px-4 py-3 border-t border-slate-100 dark:border-slate-700;
+  .input {
+    @apply w-full h-11 px-4 text-sm text-slate-900 dark:text-slate-100
+      bg-white dark:bg-slate-900/60
+      border border-slate-200 dark:border-slate-600
+      rounded-xl
+      shadow-sm shadow-slate-900/5 dark:shadow-none
+      placeholder:text-slate-400 dark:placeholder:text-slate-500
+      transition-all duration-150
+      hover:border-slate-300 dark:hover:border-slate-500
+      focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400
+      focus:ring-4 focus:ring-emerald-500/10 dark:focus:ring-emerald-400/15
+      focus:bg-white dark:focus:bg-slate-900
+      disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800;
+  }
+
+  .input-sm {
+    @apply h-9 px-3 text-sm rounded-lg focus:ring-2;
+  }
+
+  textarea.input {
+    @apply h-auto min-h-[88px] py-3 resize-y leading-relaxed;
+  }
+
+  select.input {
+    @apply cursor-pointer appearance-none pr-10 bg-no-repeat;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.875rem center;
+    background-size: 1rem;
+  }
+
+  input[type="date"].input,
+  input[type="time"].input {
+    @apply cursor-pointer;
+  }
+
+  .input-group {
+    @apply relative flex items-center;
+  }
+
+  .input-prefix {
+    @apply absolute left-4 text-sm font-medium text-slate-400 dark:text-slate-500 pointer-events-none select-none;
+  }
+
+  .input-group .input {
+    @apply pl-11;
+  }
+
+  .search-field {
+    @apply relative flex items-center;
+  }
+
+  .search-field .search-icon {
+    @apply absolute left-3.5 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none;
+  }
+
+  .search-field .input {
+    @apply pl-10 h-10 bg-slate-50 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-600/80;
+  }
+
+  .checkbox-field {
+    @apply flex items-start gap-3 cursor-pointer select-none;
+  }
+
+  .checkbox-field input[type="checkbox"] {
+    @apply mt-0.5 w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500/30 focus:ring-offset-0 cursor-pointer;
+  }
+
+  .checkbox-label {
+    @apply text-sm text-slate-700 dark:text-slate-300 leading-snug;
+  }
+
+  .form-actions {
+    @apply flex flex-wrap items-center justify-end gap-2 pt-2;
+  }
+
+  .form-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-4;
+  }
+
+  .toolbar {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .table-wrap {
+    @apply overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-700/80;
+  }
+
+  table.data-table {
+    @apply w-full text-sm;
+  }
+
+  table.data-table th {
+    @apply text-left px-4 py-3.5 bg-slate-50/80 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-medium text-xs uppercase tracking-wide;
+  }
+
+  table.data-table td {
+    @apply px-4 py-3.5 border-t border-slate-100 dark:border-slate-700/80 align-middle;
+  }
 }

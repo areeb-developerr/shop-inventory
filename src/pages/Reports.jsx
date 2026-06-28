@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
 import { todayISO, formatDate } from "../lib/format";
-import { PageHeader, Loading, ErrorBox, Modal } from "../components/shared";
+import { PageHeader, Loading, ErrorBox, Modal, Input } from "../components/shared";
 
 export default function Reports() {
   const [date, setDate] = useState(todayISO());
@@ -41,15 +41,15 @@ export default function Reports() {
         title="Daily Reports"
         subtitle="End-of-day summary for sales, udhar, and balances"
         actions={
-          <>
-            <input type="date" className="input max-w-[160px]" value={date} onChange={(e) => setDate(e.target.value)} />
+          <div className="toolbar">
+            <Input type="date" className="w-44" value={date} onChange={(e) => setDate(e.target.value)} />
             <button className="btn-primary" disabled={generating} onClick={() => generate(date)}>
               {generating ? "Generating…" : "Generate Report"}
             </button>
             <button className="btn-secondary" onClick={() => generate(todayISO())}>
               Today
             </button>
-          </>
+          </div>
         }
       />
       {msg && <div className="mb-4 text-sm text-emerald-600">{msg}</div>}
