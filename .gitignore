@@ -2,3 +2,5 @@ node_modules
 .env
 dist
 dist-electron
+stats.html
+*.db

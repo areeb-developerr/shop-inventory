@@ -1,8 +1,8 @@
 {
-  "name": "shop-inventory",
-  "version": "1.0.1",
+  "name": "shop-ledger",
+  "version": "2.0.0",
   "type": "commonjs",
-  "description": "Shop inventory desktop app",
+  "description": "Pesticide shop ledger — inventory, sales, udhar, and accounts",
   "main": "main.js",
   "author": "You",
   "private": true,
@@ -13,57 +13,33 @@
     "build:frontend": "vite build",
     "build": "npm run build:frontend",
     "dist": "npm run build && electron-builder",
-    "pack": "electron-builder --dir",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "node -e \"try{require('child_process').execSync('npx electron-builder install-app-deps',{stdio:'inherit'})}catch(e){}\""
   },
   "build": {
-    "appId": "com.yourshop.inventory",
-    "productName": "Shop Inventory",
+    "appId": "com.shopledger.app",
+    "productName": "Shop Ledger",
     "directories": {
       "output": "dist-electron",
       "buildResources": "assets"
     },
     "files": [
       "dist/**/*",
-      "backend/**/*",
+      "electron/**/*",
       "preload.js",
       "main.js",
       "package.json",
       "node_modules/**/*",
       "!node_modules/.cache/**/*",
       "!src/**/*",
-      "!assets/**/*",
-      "!*.md",
-      "!.env.example"
-    ],
-    "extraResources": [
-      {
-        "from": ".env",
-        "to": ".env",
-        "filter": [
-          "**/*"
-        ]
-      }
+      "!dashboard/**/*",
+      "!supabase/**/*"
     ],
     "asarUnpack": [
-      "node_modules/**/*",
-      "backend/**/*"
+      "node_modules/better-sqlite3/**/*",
+      "electron/**/*"
     ],
     "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
-    },
-    "mac": {
-      "target": "dmg",
-      "icon": "assets/icon.icns"
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "target": "nsis"
     }
   },
   "devDependencies": {
@@ -78,20 +54,10 @@
     "wait-on": "^7.2.0"
   },
   "dependencies": {
-    "axios": "^1.7.7",
-    "compression": "^1.8.1",
-    "cors": "^2.8.5",
-    "dexie": "^4.0.8",
-    "dotenv": "^16.6.1",
-    "express": "^4.21.2",
-    "framer-motion": "^12.23.13",
-    "helmet": "^8.1.0",
+    "@supabase/supabase-js": "^2.49.1",
+    "better-sqlite3": "^11.8.1",
     "lucide-react": "^0.363.0",
-    "mongoose": "^8.17.1",
-    "morgan": "^1.10.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-window": "^1.8.10",
-    "rollup-plugin-visualizer": "^6.0.3"
+    "react-dom": "^18.3.1"
   }
 }
