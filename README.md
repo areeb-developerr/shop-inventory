@@ -59,9 +59,25 @@ Backup anytime from **Settings → Backup Database**.
 ### Shop setup
 
 1. Create a free [Supabase](https://supabase.com) project
-2. Run `supabase/schema.sql` in the SQL Editor
-3. Create a Storage bucket named `reports`
-4. In the shop app: **Settings** → enter Supabase URL and service role key → **Sync Now**
+2. Copy `.env.example` to `.env` in the project root
+3. Set `SUPABASE_URI` to your Postgres connection string (Supabase → Project Settings → Database)
+   - **Windows / home networks:** prefer the **Session pooler** URI (`…pooler.supabase.com:5432`) — the direct `db.*.supabase.co` host is IPv6-only and often fails
+4. Optionally set `SYNC_TIMES=13:00,18:00,21:00` for scheduled sync while the app is open
+5. Restart the app — on first sync, cloud tables are created automatically (or run `supabase/schema.sql` manually in the SQL Editor)
+6. Sync runs 10s after startup, on schedule, after writes (debounced), and via the header sync chip
+
+Credentials stay in `.env` only (never in Settings UI). Keep `.env` out of git.
+
+### Sync troubleshooting
+
+| Error | Likely cause | What to do |
+|-------|----------------|------------|
+| `ENOTFOUND` / `ENETUNREACH` on `db.xxx.supabase.co` | Direct DB host is **IPv6-only**; your network may not support IPv6 | Use the **Session pooler** connection string in `SUPABASE_URI` instead (Supabase → Database → Connection string → Session mode) |
+| `password authentication failed` | Wrong DB password in URI | Reset database password in Supabase → Settings → Database, update `.env`, restart app |
+| `relation "products" does not exist` | Cloud tables not created yet | Restart app and sync again (tables auto-create), or run `supabase/schema.sql` in Supabase SQL Editor |
+| Connection timeout | Slow or unstable network | Wait and tap the header sync chip to retry; app auto-retries in the background |
+
+**Offline behavior:** Sales, inventory, and reports always save to local SQLite first. Failed syncs never delete local data. Pending changes stay queued until a sync succeeds (manual retry, automatic retries after failure, next scheduled time, or after new sales).
 
 ### Remote dashboard
 

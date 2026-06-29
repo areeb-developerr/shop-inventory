@@ -78,34 +78,107 @@ function buildSummary(date) {
 
 function toHtml(summary) {
   const fmt = (n) => `${summary.currency} ${(n / 100).toLocaleString("en-PK", { minimumFractionDigits: 0 })}`;
-  const rows = summary.invoices
+  const badge = (type) => {
+    const colors = { cash: "#059669", udhar: "#d97706", bank: "#2563eb", mixed: "#7c3aed" };
+    const c = colors[type] || "#64748b";
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;text-transform:capitalize;background:${c}22;color:${c}">${type}</span>`;
+  };
+
+  const invoiceRows = summary.invoices
     .map(
       (i) =>
-        `<tr><td>${i.invoice_no}</td><td>${i.customer_name}</td><td>${fmt(i.subtotal)}</td><td>${i.payment_type}</td></tr>`
+        `<tr>
+          <td>${i.invoice_no}</td>
+          <td>${i.customer_name}</td>
+          <td style="text-align:right">${fmt(i.subtotal)}</td>
+          <td style="text-align:right">${fmt(i.paid_amount)}</td>
+          <td style="text-align:right">${fmt(i.due_amount)}</td>
+          <td>${badge(i.payment_type)}</td>
+        </tr>`
     )
     .join("");
+
+  const invoiceTotal = summary.invoices.reduce((s, i) => s + i.subtotal, 0);
+  const totalsRow = summary.invoices.length
+    ? `<tr class="totals"><td colspan="2"><strong>Total</strong></td>
+       <td style="text-align:right"><strong>${fmt(invoiceTotal)}</strong></td>
+       <td style="text-align:right"><strong>${fmt(summary.sales.paid)}</strong></td>
+       <td style="text-align:right"><strong>${fmt(summary.sales.udhar)}</strong></td><td></td></tr>`
+    : "";
+
   const lowRows = summary.lowStock
-    .map((p) => `<tr><td>${p.name}</td><td>${p.stock_qty}</td></tr>`)
+    .map((p) => `<tr class="low"><td>${p.name}</td><td style="text-align:right">${p.stock_qty}</td><td style="text-align:right">${p.low_stock_at}</td></tr>`)
     .join("");
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Daily Report ${summary.date}</title>
-<style>body{font-family:system-ui,sans-serif;padding:24px;color:#111}h1{margin:0}table{width:100%;border-collapse:collapse;margin:12px 0}
-th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f3f4f6}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.card{border:1px solid #e5e7eb;border-radius:8px;padding:12px}</style></head><body>
-<h1>${summary.storeName}</h1><p>Daily Report — ${summary.date}</p>
-<div class="grid">
-<div class="card"><strong>Sales</strong><br>${summary.sales.count} invoices · ${fmt(summary.sales.total)}</div>
-<div class="card"><strong>Paid / Udhar</strong><br>${fmt(summary.sales.paid)} / ${fmt(summary.sales.udhar)}</div>
-<div class="card"><strong>Udhar Collected</strong><br>${fmt(summary.collections.total)}</div>
-<div class="card"><strong>Stock Purchased</strong><br>${summary.purchases.count} · ${fmt(summary.purchases.total)}</div>
-<div class="card"><strong>Cash</strong><br>${fmt(summary.balances.cashTotal)}</div>
-<div class="card"><strong>Bank</strong><br>${fmt(summary.balances.bankTotal)}</div>
-<div class="card"><strong>Customer Udhar</strong><br>${fmt(summary.balances.receivable)}</div>
-<div class="card"><strong>Supplier Payable</strong><br>${fmt(summary.balances.payable)}</div>
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Daily Report — ${summary.date} — ${summary.storeName}</title>
+<style>
+  @page { size: A4; margin: 18mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; color: #0f172a; font-size: 13px; line-height: 1.5; margin: 0; padding: 0; }
+  .page { max-width: 210mm; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #059669; padding-bottom: 16px; margin-bottom: 24px; }
+  .logo { width: 48px; height: 48px; background: linear-gradient(135deg,#059669,#0d9488); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; }
+  h1 { margin: 0; font-size: 22px; }
+  .subtitle { color: #64748b; margin: 4px 0 0; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; background: #f8fafc; }
+  .card label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+  .card strong { font-size: 16px; }
+  .card small { display: block; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; margin: 0 0 10px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  th, td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; }
+  th { background: #f1f5f9; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; }
+  tr.totals td { background: #f8fafc; border-top: 2px solid #cbd5e1; }
+  tr.low td { background: #fffbeb; }
+  .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div style="display:flex;gap:14px;align-items:center">
+      <div class="logo">${(summary.storeName || "S").charAt(0)}</div>
+      <div>
+        <h1>${summary.storeName}</h1>
+        <p class="subtitle">Daily Report — ${summary.date}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><label>Sales</label><strong>${fmt(summary.sales.total)}</strong><small>${summary.sales.count} invoices</small></div>
+    <div class="card"><label>Paid / Udhar</label><strong>${fmt(summary.sales.paid)} / ${fmt(summary.sales.udhar)}</strong></div>
+    <div class="card"><label>Udhar Collected</label><strong>${fmt(summary.collections.total)}</strong></div>
+    <div class="card"><label>Stock Purchased</label><strong>${fmt(summary.purchases.total)}</strong><small>${summary.purchases.count} purchases</small></div>
+    <div class="card"><label>Supplier Payments</label><strong>${fmt(summary.supplierPayments.total)}</strong></div>
+    <div class="card"><label>Cash</label><strong>${fmt(summary.balances.cashTotal)}</strong></div>
+    <div class="card"><label>Bank</label><strong>${fmt(summary.balances.bankTotal)}</strong></div>
+    <div class="card"><label>Customer Udhar</label><strong>${fmt(summary.balances.receivable)}</strong></div>
+    <div class="card"><label>Supplier Payable</label><strong>${fmt(summary.balances.payable)}</strong></div>
+  </div>
+
+  <h2>Invoices</h2>
+  <table>
+    <tr><th>Invoice</th><th>Customer</th><th>Total</th><th>Paid</th><th>Udhar</th><th>Payment</th></tr>
+    ${invoiceRows || '<tr><td colspan="6" style="text-align:center;color:#94a3b8">No sales today</td></tr>'}
+    ${totalsRow}
+  </table>
+
+  <h2>Low Stock</h2>
+  <table>
+    <tr><th>Item</th><th>Qty</th><th>Alert At</th></tr>
+    ${lowRows || '<tr><td colspan="3" style="text-align:center;color:#94a3b8">None</td></tr>'}
+  </table>
+
+  <div class="footer">Generated ${new Date(summary.generatedAt).toLocaleString()}</div>
 </div>
-<h2>Invoices</h2><table><tr><th>No</th><th>Customer</th><th>Total</th><th>Payment</th></tr>${rows || "<tr><td colspan=4>No sales</td></tr>"}</table>
-<h2>Low Stock</h2><table><tr><th>Item</th><th>Qty</th></tr>${lowRows || "<tr><td colspan=2>None</td></tr>"}</table>
-<p style="color:#666;font-size:12px">Generated ${summary.generatedAt}</p></body></html>`;
+</body>
+</html>`;
 }
 
 function generate(date) {

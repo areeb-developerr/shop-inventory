@@ -4,7 +4,11 @@
 
 @layer base {
   body {
-    @apply antialiased text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-900;
+    @apply antialiased text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-950;
+  }
+
+  body.modal-open {
+    @apply overflow-hidden;
   }
 
   input[type="number"]::-webkit-inner-spin-button,
@@ -18,7 +22,6 @@
     appearance: textfield;
   }
 
-  /* class for text-based numeric inputs (no spinners) */
   .input-numeric {
     -moz-appearance: textfield;
     appearance: textfield;
@@ -31,7 +34,11 @@
 
 @layer components {
   .card {
-    @apply bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-sm;
+    @apply bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm;
+  }
+
+  .card-elevated {
+    @apply bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl ring-1 ring-slate-200 dark:ring-slate-700;
   }
 
   .btn {
@@ -39,11 +46,11 @@
   }
 
   .btn-primary {
-    @apply btn bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-500 hover:shadow-emerald-500/25;
+    @apply btn bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-500;
   }
 
   .btn-secondary {
-    @apply btn bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/80;
+    @apply btn bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700;
   }
 
   .btn-danger {
@@ -51,10 +58,9 @@
   }
 
   .btn-ghost {
-    @apply btn h-9 px-3 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60;
+    @apply btn h-9 px-3 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700;
   }
 
-  /* ——— Form fields ——— */
   .form-field {
     @apply flex flex-col gap-1.5;
   }
@@ -77,17 +83,15 @@
 
   .input {
     @apply w-full h-11 px-4 text-sm text-slate-900 dark:text-slate-100
-      bg-white dark:bg-slate-900/60
+      bg-white dark:bg-slate-800
       border border-slate-200 dark:border-slate-600
-      rounded-xl
-      shadow-sm shadow-slate-900/5 dark:shadow-none
+      rounded-xl shadow-sm
       placeholder:text-slate-400 dark:placeholder:text-slate-500
       transition-all duration-150
       hover:border-slate-300 dark:hover:border-slate-500
       focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400
       focus:ring-4 focus:ring-emerald-500/10 dark:focus:ring-emerald-400/15
-      focus:bg-white dark:focus:bg-slate-900
-      disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800;
+      disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-900;
   }
 
   .input-sm {
@@ -108,6 +112,7 @@
   input[type="date"].input,
   input[type="time"].input {
     @apply cursor-pointer;
+    color-scheme: light dark;
   }
 
   .input-group {
@@ -131,7 +136,32 @@
   }
 
   .search-field .input {
-    @apply pl-10 h-10 bg-slate-50 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-600/80;
+    @apply pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-600;
+  }
+
+  .select-menu-panel {
+    @apply absolute z-[200] w-full mt-1 max-h-60 overflow-y-auto
+      bg-white dark:bg-slate-800
+      border border-slate-200 dark:border-slate-600
+      rounded-xl shadow-xl py-1;
+  }
+
+  .select-menu-option {
+    @apply px-4 py-2.5 text-sm cursor-pointer
+      text-slate-700 dark:text-slate-200
+      hover:bg-slate-100 dark:hover:bg-slate-700;
+  }
+
+  .select-menu-option-active {
+    @apply bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300;
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 z-[100] flex items-center justify-center p-4;
+  }
+
+  .modal-backdrop {
+    @apply absolute inset-0 bg-slate-950/80 backdrop-blur-md;
   }
 
   .checkbox-field {
@@ -158,8 +188,28 @@
     @apply flex flex-wrap items-center gap-2;
   }
 
+  .sync-chip {
+    @apply inline-flex items-center gap-2 px-3 h-9 rounded-xl text-xs font-medium border cursor-pointer transition-colors;
+  }
+
+  .sync-chip-ok {
+    @apply sync-chip bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800;
+  }
+
+  .sync-chip-pending {
+    @apply sync-chip bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800;
+  }
+
+  .sync-chip-error {
+    @apply sync-chip bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800;
+  }
+
+  .sync-chip-off {
+    @apply sync-chip bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600;
+  }
+
   .table-wrap {
-    @apply overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-700/80;
+    @apply overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800;
   }
 
   table.data-table {
@@ -167,10 +217,60 @@
   }
 
   table.data-table th {
-    @apply text-left px-4 py-3.5 bg-slate-50/80 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-medium text-xs uppercase tracking-wide;
+    @apply text-left px-4 py-3.5 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 font-medium text-xs uppercase tracking-wide;
   }
 
   table.data-table td {
-    @apply px-4 py-3.5 border-t border-slate-100 dark:border-slate-700/80 align-middle;
+    @apply px-4 py-3.5 border-t border-slate-100 dark:border-slate-700 align-middle;
+  }
+
+  .badge {
+    @apply inline-flex px-2 py-0.5 rounded-md text-xs font-medium capitalize;
+  }
+
+  .badge-cash {
+    @apply badge bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300;
+  }
+
+  .badge-udhar {
+    @apply badge bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300;
+  }
+
+  .badge-bank {
+    @apply badge bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300;
+  }
+
+  .badge-mixed {
+    @apply badge bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300;
+  }
+}
+
+@media print {
+  aside,
+  header,
+  .toolbar,
+  button:not(.print-visible) {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .modal-overlay {
+    position: static !important;
+    padding: 0 !important;
+  }
+
+  .modal-backdrop {
+    display: none !important;
+  }
+
+  .card-elevated {
+    box-shadow: none !important;
+    border: none !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 }

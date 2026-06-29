@@ -83,7 +83,8 @@ function createSale({ customerId, items, cashAmount = 0, bankAmount = 0, account
        VALUES (?, ?, ?, ?, ?, ?)`
     );
     for (const li of lineItems) {
-      insertItem.run(invoiceId, li.product.id, li.product.name, li.qty, li.unitPrice, li.lineTotal);
+      const itemRow = insertItem.run(invoiceId, li.product.id, li.product.name, li.qty, li.unitPrice, li.lineTotal);
+      logSync("invoice_items", itemRow.lastInsertRowid, "upsert");
       db.prepare("UPDATE products SET stock_qty = stock_qty - ?, updated_at=datetime('now') WHERE id = ?").run(
         li.qty,
         li.product.id
@@ -181,7 +182,8 @@ function createPurchase({ supplierId, items, paidAmount = 0, accountId, notes = 
        VALUES (?, ?, ?, ?, ?, ?)`
     );
     for (const li of lineItems) {
-      insertItem.run(purchaseId, li.product.id, li.product.name, li.qty, li.unitCost, li.lineTotal);
+      const itemRow = insertItem.run(purchaseId, li.product.id, li.product.name, li.qty, li.unitCost, li.lineTotal);
+      logSync("purchase_items", itemRow.lastInsertRowid, "upsert");
       db.prepare(
         "UPDATE products SET stock_qty = stock_qty + ?, cost_price = ?, updated_at=datetime('now') WHERE id = ?"
       ).run(li.qty, li.unitCost, li.product.id);

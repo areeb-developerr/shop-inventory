@@ -1,5 +1,7 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { fromPaisa } from "../lib/format";
-import { Search } from "lucide-react";
+import { Search, ChevronDown, X } from "lucide-react";
 import { sanitizeMoneyInput, sanitizeQtyInput } from "../lib/validate";
 
 function fieldClass(base, error, className) {
@@ -50,6 +52,99 @@ export function Select({ className = "", error, children, ...props }) {
     <select className={fieldClass("input", error, className)} {...props}>
       {children}
     </select>
+  );
+}
+
+export function SelectMenu({ value, onChange, options = [], placeholder = "Select…", error, className = "", disabled }) {
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(-1);
+  const ref = useRef(null);
+  const listRef = useRef(null);
+
+  const selected = options.find((o) => String(o.value) === String(value));
+
+  useEffect(() => {
+    const close = (e) => {
+      if (!ref.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  useEffect(() => {
+    if (!open) setHighlight(-1);
+  }, [open]);
+
+  const pick = useCallback((val) => {
+    onChange?.(val);
+    setOpen(false);
+  }, [onChange]);
+
+  const onKeyDown = (e) => {
+    if (disabled) return;
+    if (!open && (e.key === "Enter" || e.key === " " || e.key === "ArrowDown")) {
+      e.preventDefault();
+      setOpen(true);
+      return;
+    }
+    if (!open) return;
+    if (e.key === "Escape") {
+      setOpen(false);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight((h) => Math.min(h + 1, options.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((h) => Math.max(h - 1, 0));
+    } else if (e.key === "Enter" && highlight >= 0) {
+      e.preventDefault();
+      pick(options[highlight].value);
+    }
+  };
+
+  useEffect(() => {
+    if (highlight >= 0 && listRef.current) {
+      const el = listRef.current.children[highlight];
+      el?.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlight]);
+
+  return (
+    <div className={`relative ${className}`} ref={ref}>
+      <button
+        type="button"
+        disabled={disabled}
+        className={fieldClass("input text-left flex items-center justify-between gap-2", error, "w-full")}
+        onClick={() => !disabled && setOpen(!open)}
+        onKeyDown={onKeyDown}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className={!selected ? "text-slate-400 dark:text-slate-500" : "truncate"}>
+          {selected?.label || placeholder}
+        </span>
+        <ChevronDown className={`w-4 h-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <ul ref={listRef} className="select-menu-panel" role="listbox">
+          {options.map((opt, i) => (
+            <li
+              key={String(opt.value)}
+              role="option"
+              aria-selected={String(opt.value) === String(value)}
+              className={`select-menu-option ${String(opt.value) === String(value) ? "select-menu-option-active" : ""} ${i === highlight ? "bg-slate-100 dark:bg-slate-700" : ""}`}
+              onClick={() => pick(opt.value)}
+              onMouseEnter={() => setHighlight(i)}
+            >
+              {opt.label}
+            </li>
+          ))}
+          {!options.length && (
+            <li className="px-4 py-2.5 text-sm text-slate-400">No options</li>
+          )}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -174,26 +269,65 @@ export function ErrorBox({ message, onRetry }) {
   );
 }
 
+function PaymentBadge({ type }) {
+  const cls = {
+    cash: "badge-cash",
+    udhar: "badge-udhar",
+    bank: "badge-bank",
+    mixed: "badge-mixed",
+  }[type] || "badge";
+  return <span className={cls}>{type}</span>;
+}
+
+export { PaymentBadge };
+
 export function Modal({ open, onClose, title, children, wide }) {
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.classList.add("modal-open");
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.classList.remove("modal-open");
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (open && panelRef.current) {
+      const focusable = panelRef.current.querySelector("input, button, select, textarea");
+      focusable?.focus();
+    }
+  }, [open]);
+
   if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+
+  return createPortal(
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div className="modal-backdrop" onClick={onClose} aria-hidden="true" />
       <div
-        className={`card w-full ${wide ? "max-w-2xl" : "max-w-md"} p-6 max-h-[90vh] overflow-y-auto`}
+        ref={panelRef}
+        className={`card-elevated relative z-10 w-full ${wide ? "max-w-2xl" : "max-w-md"} p-6 max-h-[90vh] overflow-y-auto`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-100 dark:border-slate-700">
-          <h2 className="text-lg font-semibold">{title}</h2>
+        <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 id="modal-title" className="text-lg font-semibold">{title}</h2>
           <button
+            type="button"
             onClick={onClose}
-            className="btn-ghost w-9 h-9 p-0 rounded-full text-lg"
+            className="btn-ghost w-9 h-9 p-0 rounded-full"
             aria-label="Close"
           >
-            ×
+            <X className="w-4 h-4" />
           </button>
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

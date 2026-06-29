@@ -21,6 +21,7 @@ function initDb() {
 
   const schemaPath = path.join(__dirname, "schema.sql");
   db.exec(fs.readFileSync(schemaPath, "utf8"));
+  migrateSyncLog();
 
   const accountCount = db.prepare("SELECT COUNT(*) as c FROM accounts").get().c;
   if (accountCount === 0) {
@@ -37,8 +38,6 @@ function initDb() {
       lowStockThreshold: "5",
       autoReportEnabled: "false",
       autoReportTime: "21:00",
-      supabaseUrl: "",
-      supabaseKey: "",
     };
     const insert = db.prepare(
       "INSERT INTO settings (key, value) VALUES (@key, @value)"
@@ -76,10 +75,31 @@ function getAllSettings() {
   return Object.fromEntries(rows.map((r) => [r.key, r.value]));
 }
 
+function migrateSyncLog() {
+  const cols = db.prepare("PRAGMA table_info(sync_log)").all();
+  if (!cols.length) return;
+  const syncedCol = cols.find((c) => c.name === "synced_at");
+  if (syncedCol && syncedCol.notnull === 1) {
+    db.exec(`
+      CREATE TABLE sync_log_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        table_name TEXT NOT NULL,
+        record_id INTEGER NOT NULL,
+        action TEXT NOT NULL,
+        synced_at TEXT
+      );
+      INSERT INTO sync_log_new (id, table_name, record_id, action, synced_at)
+        SELECT id, table_name, record_id, action, NULL FROM sync_log;
+      DROP TABLE sync_log;
+      ALTER TABLE sync_log_new RENAME TO sync_log;
+    `);
+  }
+}
+
 function logSync(tableName, recordId, action) {
   getDb()
     .prepare(
-      "INSERT INTO sync_log (table_name, record_id, action) VALUES (?, ?, ?)"
+      "INSERT INTO sync_log (table_name, record_id, action, synced_at) VALUES (?, ?, ?, NULL)"
     )
     .run(tableName, recordId, action);
 }

@@ -14,13 +14,26 @@ const dashboard = require("./db/repositories/dashboard");
 const reports = require("./db/reports");
 const sync = require("./db/sync");
 
+const WRITE_CHANNELS = new Set([
+  "products:create", "products:update", "products:delete",
+  "accounts:create", "accounts:adjust", "accounts:transfer",
+  "customers:create", "customers:update", "customers:pay",
+  "suppliers:create", "suppliers:update", "suppliers:pay",
+  "sales:create", "purchases:create",
+  "reports:generate",
+]);
+
 function registerIpc() {
   initDb();
 
   const handle = (channel, fn) => {
     ipcMain.handle(channel, async (_event, args) => {
       try {
-        return { ok: true, data: await fn(args) };
+        const data = await fn(args);
+        if (WRITE_CHANNELS.has(channel)) {
+          sync.scheduleDebouncedPush();
+        }
+        return { ok: true, data };
       } catch (err) {
         return { ok: false, error: err.message || String(err) };
       }
@@ -79,7 +92,6 @@ function registerIpc() {
 
   // Sync
   handle("sync:status", () => sync.status());
-  handle("sync:configure", (data) => sync.configure(data));
   handle("sync:push", () => sync.pushNow());
 
   // DB backup

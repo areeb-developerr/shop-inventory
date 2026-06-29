@@ -1,4 +1,5 @@
 const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const { app, BrowserWindow } = require("electron");
 const { registerIpc } = require("./electron/ipc");
 const { initDb } = require("./electron/db/index");
@@ -9,6 +10,7 @@ const { getSetting } = require("./electron/db/index");
 const isDev = !app.isPackaged;
 let win = null;
 let reportCheckInterval = null;
+let startupSyncTimer = null;
 
 function createWindow() {
   win = new BrowserWindow({
@@ -47,7 +49,7 @@ function startAutoReport() {
       const existing = initDb().prepare("SELECT id FROM daily_reports WHERE date = ?").get(today);
       if (!existing) {
         reports.generate(today);
-        sync.pushNow().catch(() => {});
+        sync.pushNow({ background: true }).catch(() => {});
       }
     }
   }, 60 * 1000);
@@ -56,14 +58,20 @@ function startAutoReport() {
 app.whenReady().then(() => {
   registerIpc();
   initDb();
-  sync.startAutoSync();
+  sync.startScheduler();
+  if (sync.isConfigured()) {
+    startupSyncTimer = setTimeout(() => {
+      sync.pushNow({ background: true }).catch(() => {});
+    }, 10000);
+  }
   startAutoReport();
   createWindow();
 });
 
 app.on("window-all-closed", () => {
-  sync.stopAutoSync();
+  sync.stopScheduler();
   if (reportCheckInterval) clearInterval(reportCheckInterval);
+  if (startupSyncTimer) clearTimeout(startupSyncTimer);
   if (process.platform !== "darwin") app.quit();
 });
 

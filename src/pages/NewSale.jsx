@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
 import { toPaisa } from "../lib/format";
-import { PageHeader, Money, Loading, ErrorBox, FormField, Select, Textarea, MoneyInput, SearchInput, QtyInput } from "../components/shared";
+import { PageHeader, Money, Loading, ErrorBox, FormField, SelectMenu, Textarea, MoneyInput, SearchInput, QtyInput } from "../components/shared";
 import { validateMoney, validateQty, clampQty, parseQty } from "../lib/validate";
 
 export default function NewSale({ setTab }) {
@@ -42,7 +42,7 @@ export default function NewSale({ setTab }) {
       const nextQty = Math.min(existing.qty + 1, product.stock_qty);
       setCart(cart.map((c) =>
         c.productId === product.id
-          ? { ...c, qty: nextQty, lineTotal: Math.round(nextQty * c.unitPrice) }
+          ? { ...c, qty: nextQty, lineTotal: Math.round(nextQty * c.unitPrice), catalogPrice: c.catalogPrice ?? product.sell_price }
           : c
       ));
     } else {
@@ -51,10 +51,20 @@ export default function NewSale({ setTab }) {
         name: product.name,
         qty: 1,
         unitPrice: product.sell_price,
+        catalogPrice: product.sell_price,
         lineTotal: product.sell_price,
         maxStock: product.stock_qty,
       }]);
     }
+  };
+
+  const updatePrice = (productId, rawPrice) => {
+    const paisa = toPaisa(rawPrice || 0);
+    setCart(cart.map((c) => {
+      if (c.productId !== productId) return c;
+      const qty = parseQty(c.qty) || 1;
+      return { ...c, unitPrice: paisa, lineTotal: Math.round(qty * paisa) };
+    }));
   };
 
   const updateQty = (productId, rawQty) => {
@@ -88,6 +98,11 @@ export default function NewSale({ setTab }) {
       const qtyErr = validateQty(c.qty, { min: 0.01, max: c.maxStock, fieldName: `${c.name} quantity` });
       if (qtyErr) {
         e.cart = qtyErr;
+        break;
+      }
+      const priceErr = validateMoney(String(c.unitPrice / 100), { min: 0.01, fieldName: `${c.name} price` });
+      if (priceErr) {
+        e.cart = priceErr;
         break;
       }
     }
@@ -196,12 +211,25 @@ export default function NewSale({ setTab }) {
             <div className="table-wrap border-0">
               <table className="data-table">
                 <thead>
-                  <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th><th></th></tr>
+                  <tr>
+                    <th>Item</th>
+                    <th>Qty</th>
+                    <th>Unit price</th>
+                    <th>Total</th>
+                    <th></th>
+                  </tr>
                 </thead>
                 <tbody>
                   {cart.map((c) => (
                     <tr key={c.productId}>
-                      <td>{c.name}</td>
+                      <td>
+                        <span className="font-medium">{c.name}</span>
+                        {c.catalogPrice != null && c.unitPrice !== c.catalogPrice && (
+                          <span className="block text-xs text-slate-400">
+                            List: <Money amount={c.catalogPrice} />
+                          </span>
+                        )}
+                      </td>
                       <td>
                         <QtyInput
                           className="w-24"
@@ -212,7 +240,14 @@ export default function NewSale({ setTab }) {
                           }}
                         />
                       </td>
-                      <td><Money amount={c.unitPrice} /></td>
+                      <td>
+                        <MoneyInput
+                          className="w-32 h-9"
+                          value={c.unitPrice ? String(c.unitPrice / 100) : ""}
+                          onChange={(e) => updatePrice(c.productId, e.target.value)}
+                          placeholder="0"
+                        />
+                      </td>
                       <td><Money amount={c.lineTotal} /></td>
                       <td>
                         <button className="text-red-500 text-sm" onClick={() => updateQty(c.productId, 0)}>Remove</button>
@@ -230,10 +265,16 @@ export default function NewSale({ setTab }) {
 
         <div className="card p-5 space-y-5 h-fit">
           <FormField label="Customer" error={fieldErrors.customer}>
-            <Select value={customerId} onChange={(e) => { setCustomerId(e.target.value); setFieldErrors((f) => ({ ...f, customer: null })); }} error={fieldErrors.customer}>
-              <option value="">Walk-in customer</option>
-              {customers?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </Select>
+            <SelectMenu
+              value={customerId}
+              onChange={(v) => { setCustomerId(v); setFieldErrors((f) => ({ ...f, customer: null })); }}
+              error={fieldErrors.customer}
+              placeholder="Walk-in customer"
+              options={[
+                { value: "", label: "Walk-in customer" },
+                ...(customers?.map((c) => ({ value: String(c.id), label: c.name })) || []),
+              ]}
+            />
           </FormField>
 
           <div className="text-lg font-semibold flex justify-between py-1 border-y border-slate-100 dark:border-slate-700">

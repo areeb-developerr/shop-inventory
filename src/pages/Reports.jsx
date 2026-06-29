@@ -3,14 +3,16 @@ import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
 import { todayISO, formatDate } from "../lib/format";
 import { PageHeader, Loading, ErrorBox, Modal, Input } from "../components/shared";
+import ReportView from "../components/ReportView";
 
 export default function Reports() {
   const [date, setDate] = useState(todayISO());
-  const [preview, setPreview] = useState(null);
+  const [viewReport, setViewReport] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [msg, setMsg] = useState("");
 
   const { data: reports, loading, error, reload } = useAsync(() => api.reports.list(), []);
+  const { data: todayReport } = useAsync(() => api.reports.get(todayISO()), []);
 
   const generate = async (targetDate) => {
     setGenerating(true);
@@ -27,10 +29,12 @@ export default function Reports() {
     }
   };
 
-  const viewReport = async (reportDate) => {
-    const html = await api.reports.html(reportDate);
-    setPreview(html);
+  const openReport = async (reportDate) => {
+    const report = await api.reports.get(reportDate);
+    if (report?.summary) setViewReport(report.summary);
   };
+
+  const handlePrint = () => window.print();
 
   if (loading && !reports) return <Loading />;
   if (error) return <ErrorBox message={error} onRetry={reload} />;
@@ -52,7 +56,19 @@ export default function Reports() {
           </div>
         }
       />
-      {msg && <div className="mb-4 text-sm text-emerald-600">{msg}</div>}
+      {msg && <div className="mb-4 text-sm text-emerald-600 dark:text-emerald-400">{msg}</div>}
+
+      {todayReport?.summary && (
+        <div className="card p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold">Today&apos;s Summary</h2>
+            <button type="button" className="text-sm text-emerald-600" onClick={() => setViewReport(todayReport.summary)}>
+              Full report
+            </button>
+          </div>
+          <ReportView summary={todayReport.summary} />
+        </div>
+      )}
 
       <div className="card">
         <div className="table-wrap border-0">
@@ -72,7 +88,7 @@ export default function Reports() {
                   <td>{new Date(r.generated_at).toLocaleString()}</td>
                   <td>{r.synced_at ? new Date(r.synced_at).toLocaleString() : "Pending"}</td>
                   <td>
-                    <button className="text-sm text-emerald-600" onClick={() => viewReport(r.date)}>View</button>
+                    <button type="button" className="text-sm text-emerald-600" onClick={() => openReport(r.date)}>View</button>
                   </td>
                 </tr>
               ))}
@@ -84,14 +100,8 @@ export default function Reports() {
         </div>
       </div>
 
-      <Modal open={!!preview} onClose={() => setPreview(null)} title="Report Preview" wide>
-        {preview && (
-          <iframe
-            title="Report"
-            srcDoc={preview}
-            className="w-full h-[70vh] border border-slate-200 dark:border-slate-700 rounded-lg"
-          />
-        )}
+      <Modal open={!!viewReport} onClose={() => setViewReport(null)} title="Daily Report" wide>
+        <ReportView summary={viewReport} onPrint={handlePrint} />
       </Modal>
     </div>
   );

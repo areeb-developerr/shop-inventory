@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
 import { toPaisa } from "../lib/format";
-import { PageHeader, Money, Loading, ErrorBox, Modal, FormField, Input, Select, Textarea, MoneyInput, QtyInput, SearchInput } from "../components/shared";
+import { PageHeader, Money, Loading, ErrorBox, Modal, FormField, Input, SelectMenu, Textarea, MoneyInput, QtyInput, SearchInput } from "../components/shared";
 import { validateName, validatePhone, validateMoney, validateSelect, validateQty, parseMoney } from "../lib/validate";
 
 export default function People() {
@@ -76,7 +76,7 @@ export default function People() {
 
   const openPay = (party) => {
     setPayParty(party);
-    setPayForm({ partyId: party.id, amount: String(Math.round(party.balance / 100)), accountId: accounts?.[0]?.id || "" });
+    setPayForm({ partyId: party.id, amount: String(Math.round(party.balance / 100)), accountId: accounts?.[0]?.id ? String(accounts[0].id) : "" });
     setErrors({});
     setPayOpen(true);
   };
@@ -242,10 +242,16 @@ export default function People() {
             <MoneyInput required value={payForm.amount} onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })} error={errors.amount} />
           </FormField>
           <FormField label={tab === "customers" ? "Deposit to Account" : "Pay from Account"} error={errors.accountId}>
-            <Select value={payForm.accountId} onChange={(e) => setPayForm({ ...payForm, accountId: e.target.value })} error={errors.accountId}>
-              <option value="">Select account</option>
-              {accounts?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </Select>
+            <SelectMenu
+              value={payForm.accountId}
+              onChange={(v) => setPayForm({ ...payForm, accountId: v })}
+              error={errors.accountId}
+              placeholder="Select account"
+              options={[
+                { value: "", label: "Select account" },
+                ...(accounts?.map((a) => ({ value: String(a.id), label: a.name })) || []),
+              ]}
+            />
           </FormField>
           <button type="submit" className="btn-primary w-full">Confirm Payment</button>
         </form>
@@ -254,18 +260,29 @@ export default function People() {
       <Modal open={purchaseOpen} onClose={() => setPurchaseOpen(false)} title="Stock Purchase" wide>
         <form onSubmit={submitPurchase} className="space-y-4">
           <FormField label="Supplier" required error={errors.supplierId}>
-            <Select required value={purchaseForm.supplierId} onChange={(e) => setPurchaseForm({ ...purchaseForm, supplierId: e.target.value })} error={errors.supplierId}>
-              <option value="">Select supplier</option>
-              {suppliers?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </Select>
+            <SelectMenu
+              value={purchaseForm.supplierId}
+              onChange={(v) => setPurchaseForm({ ...purchaseForm, supplierId: v })}
+              error={errors.supplierId}
+              placeholder="Select supplier"
+              options={[
+                { value: "", label: "Select supplier" },
+                ...(suppliers?.map((s) => ({ value: String(s.id), label: s.name })) || []),
+              ]}
+            />
           </FormField>
           {errors.items && <p className="field-error">{errors.items}</p>}
           <div className="flex gap-3 items-end">
             <FormField label="Product" className="flex-1" error={errors.purchase?.product}>
-              <Select value={productPick.productId} onChange={(e) => setProductPick({ ...productPick, productId: e.target.value })}>
-                <option value="">Select product</option>
-                {products?.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </Select>
+              <SelectMenu
+                value={productPick.productId}
+                onChange={(v) => setProductPick({ ...productPick, productId: v })}
+                placeholder="Select product"
+                options={[
+                  { value: "", label: "Select product" },
+                  ...(products?.map((p) => ({ value: String(p.id), label: p.name })) || []),
+                ]}
+              />
             </FormField>
             <FormField label="Qty" className="w-28" error={errors.purchase?.qty}>
               <QtyInput value={productPick.qty} onChange={(e) => setProductPick({ ...productPick, qty: e.target.value })} />
@@ -284,10 +301,16 @@ export default function People() {
           </FormField>
           {parseMoney(purchaseForm.paidAmount) > 0 && (
             <FormField label="Pay From Account" error={errors.accountId}>
-              <Select value={purchaseForm.accountId} onChange={(e) => setPurchaseForm({ ...purchaseForm, accountId: e.target.value })} error={errors.accountId}>
-                <option value="">Select account</option>
-                {accounts?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </Select>
+              <SelectMenu
+                value={purchaseForm.accountId}
+                onChange={(v) => setPurchaseForm({ ...purchaseForm, accountId: v })}
+                error={errors.accountId}
+                placeholder="Select account"
+                options={[
+                  { value: "", label: "Select account" },
+                  ...(accounts?.map((a) => ({ value: String(a.id), label: a.name })) || []),
+                ]}
+              />
             </FormField>
           )}
           <button type="submit" className="btn-primary w-full" disabled={!purchaseForm.items.length}>Record Purchase</button>

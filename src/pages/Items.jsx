@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
 import { toPaisa } from "../lib/format";
-import { PageHeader, Money, Loading, ErrorBox, Modal, EmptyState, FormField, Input, Select, MoneyInput, QtyInput, SearchInput } from "../components/shared";
+import { PageHeader, Money, Loading, ErrorBox, Modal, EmptyState, FormField, Input, SelectMenu, MoneyInput, QtyInput, SearchInput } from "../components/shared";
 import { validateName, validateMoney, validateQty } from "../lib/validate";
 
 const emptyForm = {
@@ -185,10 +185,15 @@ export default function Items() {
             <MoneyInput value={form.sell_price} onChange={(e) => setForm({ ...form, sell_price: e.target.value })} placeholder="0" error={errors.sell_price} />
           </FormField>
           <FormField label="Supplier" className="sm:col-span-2">
-            <Select value={form.supplier_id} onChange={(e) => setForm({ ...form, supplier_id: e.target.value })}>
-              <option value="">None</option>
-              {suppliers?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </Select>
+            <SelectMenu
+              value={form.supplier_id}
+              onChange={(v) => setForm({ ...form, supplier_id: v })}
+              placeholder="None"
+              options={[
+                { value: "", label: "None" },
+                ...(suppliers?.map((s) => ({ value: String(s.id), label: s.name })) || []),
+              ]}
+            />
           </FormField>
           <div className="sm:col-span-2 form-actions">
             <button type="button" className="btn-secondary" onClick={() => setOpen(false)}>Cancel</button>

@@ -60,7 +60,6 @@ const api = {
   },
   sync: {
     status: () => invoke("sync:status"),
-    configure: (data) => invoke("sync:configure", data),
     push: () => invoke("sync:push"),
   },
   db: {

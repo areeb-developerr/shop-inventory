@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS sync_log (
   table_name TEXT NOT NULL,
   record_id INTEGER NOT NULL,
   action TEXT NOT NULL,
-  synced_at TEXT NOT NULL DEFAULT (datetime('now'))
+  synced_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(date);

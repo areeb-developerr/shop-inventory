@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
 import { toPaisa } from "../lib/format";
-import { PageHeader, Money, Loading, ErrorBox, Modal, FormField, Input, Select, MoneyInput } from "../components/shared";
+import { PageHeader, Money, Loading, ErrorBox, Modal, FormField, Input, SelectMenu, MoneyInput } from "../components/shared";
 import { validateName, validateMoney, validateSelect } from "../lib/validate";
 
 export default function Accounts() {
@@ -116,10 +116,14 @@ export default function Accounts() {
             <Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Cash Drawer, HBL" error={errors.name} maxLength={80} />
           </FormField>
           <FormField label="Type">
-            <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-              <option value="cash">Cash</option>
-              <option value="bank">Bank</option>
-            </Select>
+            <SelectMenu
+              value={form.type}
+              onChange={(v) => setForm({ ...form, type: v })}
+              options={[
+                { value: "cash", label: "Cash" },
+                { value: "bank", label: "Bank" },
+              ]}
+            />
           </FormField>
           <FormField label="Opening Balance" hint="Current balance when creating this account" error={errors.balance}>
             <MoneyInput value={form.balance} onChange={(e) => setForm({ ...form, balance: e.target.value })} placeholder="0" error={errors.balance} />
@@ -140,16 +144,28 @@ export default function Accounts() {
       <Modal open={transferOpen} onClose={() => setTransferOpen(false)} title="Transfer Funds">
         <form onSubmit={doTransfer} className="space-y-4">
           <FormField label="From Account" required error={errors.fromId}>
-            <Select required value={transfer.fromId} onChange={(e) => setTransfer({ ...transfer, fromId: e.target.value })} error={errors.fromId}>
-              <option value="">Select account</option>
-              {accounts?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </Select>
+            <SelectMenu
+              value={transfer.fromId}
+              onChange={(v) => setTransfer({ ...transfer, fromId: v })}
+              error={errors.fromId}
+              placeholder="Select account"
+              options={[
+                { value: "", label: "Select account" },
+                ...(accounts?.map((a) => ({ value: String(a.id), label: a.name })) || []),
+              ]}
+            />
           </FormField>
           <FormField label="To Account" required error={errors.toId}>
-            <Select required value={transfer.toId} onChange={(e) => setTransfer({ ...transfer, toId: e.target.value })} error={errors.toId}>
-              <option value="">Select account</option>
-              {accounts?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </Select>
+            <SelectMenu
+              value={transfer.toId}
+              onChange={(v) => setTransfer({ ...transfer, toId: v })}
+              error={errors.toId}
+              placeholder="Select account"
+              options={[
+                { value: "", label: "Select account" },
+                ...(accounts?.map((a) => ({ value: String(a.id), label: a.name })) || []),
+              ]}
+            />
           </FormField>
           <FormField label="Amount" required error={errors.amount}>
             <MoneyInput required value={transfer.amount} onChange={(e) => setTransfer({ ...transfer, amount: e.target.value })} placeholder="0" error={errors.amount} />
