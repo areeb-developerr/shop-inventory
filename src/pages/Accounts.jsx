@@ -77,6 +77,13 @@ export default function Accounts() {
   if (error) return <ErrorBox message={error} onRetry={reload} />;
 
   const total = accounts?.reduce((s, a) => s + a.balance, 0) || 0;
+  const hasCashAccount = accounts?.some((a) => a.type === "cash");
+
+  const openCreate = () => {
+    setForm({ name: "", type: hasCashAccount ? "bank" : "cash", balance: "" });
+    setErrors({});
+    setOpen(true);
+  };
 
   return (
     <div>
@@ -86,7 +93,7 @@ export default function Accounts() {
         actions={
           <div className="toolbar">
             <button className="btn-secondary" onClick={() => setTransferOpen(true)}>Transfer</button>
-            <button className="btn-primary" onClick={() => setOpen(true)}>Add Account</button>
+            <button className="btn-primary" onClick={openCreate}>Add Account</button>
           </div>
         }
       />
@@ -115,12 +122,15 @@ export default function Accounts() {
           <FormField label="Account Name" required error={errors.name}>
             <Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Cash Drawer, HBL" error={errors.name} maxLength={80} />
           </FormField>
-          <FormField label="Type">
+          <FormField
+            label="Type"
+            hint={hasCashAccount ? "Only one cash account is allowed. Add more bank accounts as needed." : "You can have one cash account and multiple bank accounts."}
+          >
             <SelectMenu
               value={form.type}
               onChange={(v) => setForm({ ...form, type: v })}
               options={[
-                { value: "cash", label: "Cash" },
+                ...(hasCashAccount ? [] : [{ value: "cash", label: "Cash" }]),
                 { value: "bank", label: "Bank" },
               ]}
             />

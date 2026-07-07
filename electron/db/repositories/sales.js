@@ -61,6 +61,18 @@ function createSale({ customerId, items, cashAmount = 0, bankAmount = 0, account
     const dueAmount = subtotal - paidAmount;
     if (dueAmount < 0) throw new Error("Paid amount exceeds total");
     if (dueAmount > 0 && !customerId) throw new Error("Select a customer for udhar sales");
+    if (cashAmount > 0) {
+      if (!accountId) throw new Error("Select a cash account for this payment");
+      const cashAccount = db.prepare("SELECT id, type FROM accounts WHERE id = ?").get(accountId);
+      if (!cashAccount) throw new Error("Cash account not found");
+      if (cashAccount.type !== "cash") throw new Error("Selected account is not a cash account");
+    }
+    if (bankAmount > 0) {
+      if (!bankAccountId) throw new Error("Select a bank account for this payment");
+      const bankAccount = db.prepare("SELECT id, type FROM accounts WHERE id = ?").get(bankAccountId);
+      if (!bankAccount) throw new Error("Bank account not found");
+      if (bankAccount.type !== "bank") throw new Error("Selected account is not a bank account");
+    }
 
     let paymentType = "cash";
     if (dueAmount === subtotal) paymentType = "udhar";
