@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
 import { toPaisa } from "../lib/format";
@@ -15,13 +15,33 @@ export default function NewSale({ setTab }) {
   const [customerId, setCustomerId] = useState("");
   const [cashAmount, setCashAmount] = useState("");
   const [bankAmount, setBankAmount] = useState("");
+  const [cashAccountId, setCashAccountId] = useState("");
+  const [bankAccountId, setBankAccountId] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
-  const cashAccount = accounts?.find((a) => a.type === "cash" && a.is_default) || accounts?.find((a) => a.type === "cash");
-  const bankAccount = accounts?.find((a) => a.type === "bank");
+  const cashAccounts = useMemo(() => accounts?.filter((a) => a.type === "cash") || [], [accounts]);
+  const bankAccounts = useMemo(() => accounts?.filter((a) => a.type === "bank") || [], [accounts]);
+  const cashPaisa = toPaisa(cashAmount || 0);
+  const bankPaisa = toPaisa(bankAmount || 0);
+
+  useEffect(() => {
+    if (!cashAccounts.length) return;
+    const defaultCash = cashAccounts.find((a) => a.is_default) || cashAccounts[0];
+    setCashAccountId((current) => current || String(defaultCash.id));
+  }, [cashAccounts]);
+
+  useEffect(() => {
+    if (bankPaisa <= 0) {
+      setBankAccountId("");
+      return;
+    }
+    if (bankAccounts.length === 1) {
+      setBankAccountId(String(bankAccounts[0].id));
+    }
+  }, [bankPaisa, bankAccounts]);
 
   const filtered = useMemo(() => {
     if (!products) return [];
@@ -30,8 +50,6 @@ export default function NewSale({ setTab }) {
   }, [products, search]);
 
   const subtotal = cart.reduce((s, c) => s + c.lineTotal, 0);
-  const cashPaisa = toPaisa(cashAmount || 0);
-  const bankPaisa = toPaisa(bankAmount || 0);
   const paid = cashPaisa + bankPaisa;
   const due = subtotal - paid;
 
@@ -110,14 +128,16 @@ export default function NewSale({ setTab }) {
     if (cashErr) e.cash = cashErr;
     const bankErr = validateMoney(bankAmount, { min: 0, fieldName: "Bank amount" });
     if (bankErr) e.bank = bankErr;
-    if (cashPaisa > 0 && !cashAccount) e.cash = "No cash account configured";
-    if (bankPaisa > 0 && !bankAccount) e.bank = "No bank account configured";
+    if (cashPaisa > 0 && !cashAccountId) e.cashAccount = "Select a cash account";
+    if (cashPaisa > 0 && !cashAccounts.length) e.cash = "No cash account configured";
+    if (bankPaisa > 0 && !bankAccountId) e.bankAccount = "Select a bank account";
+    if (bankPaisa > 0 && !bankAccounts.length) e.bank = "No bank account configured";
     if (due > 0 && !customerId) e.customer = "Select a customer for udhar (credit) sales";
     if (due < 0) e.payment = "Total paid cannot exceed sale amount";
     if (subtotal > 0 && paid === 0 && !customerId) e.customer = "Select a customer for full udhar sale";
     setFieldErrors(e);
     if (Object.keys(e).length) {
-      setError(e.cart || e.payment || e.customer || e.cash || e.bank || "Please fix the errors below");
+      setError(e.cart || e.payment || e.customer || e.cash || e.bank || e.cashAccount || e.bankAccount || "Please fix the errors below");
       return false;
     }
     setError("");
@@ -133,13 +153,14 @@ export default function NewSale({ setTab }) {
         items: cart.map((c) => ({ productId: c.productId, qty: c.qty, unitPrice: c.unitPrice })),
         cashAmount: cashPaisa,
         bankAmount: bankPaisa,
-        accountId: cashPaisa > 0 ? cashAccount?.id : null,
-        bankAccountId: bankPaisa > 0 ? bankAccount?.id : null,
+        accountId: cashPaisa > 0 ? Number(cashAccountId) : null,
+        bankAccountId: bankPaisa > 0 ? Number(bankAccountId) : null,
         notes,
       });
       setCart([]);
       setCashAmount("");
       setBankAmount("");
+      setBankAccountId("");
       setNotes("");
       setCustomerId("");
       setFieldErrors({});
@@ -288,11 +309,36 @@ export default function NewSale({ setTab }) {
           </div>
 
           <FormField label="Cash received" hint="Amount paid in cash" error={fieldErrors.cash}>
-            <MoneyInput value={cashAmount} onChange={(e) => { setCashAmount(e.target.value); setFieldErrors((f) => ({ ...f, cash: null })); }} placeholder="0" error={fieldErrors.cash} />
+            <MoneyInput value={cashAmount} onChange={(e) => { setCashAmount(e.target.value); setFieldErrors((f) => ({ ...f, cash: null, cashAccount: null })); }} placeholder="0" error={fieldErrors.cash} />
           </FormField>
+          {cashPaisa > 0 && (
+            <FormField label="Deposit to cash account" error={fieldErrors.cashAccount}>
+              <SelectMenu
+                value={cashAccountId}
+                onChange={(v) => { setCashAccountId(v); setFieldErrors((f) => ({ ...f, cashAccount: null })); }}
+                error={fieldErrors.cashAccount}
+                placeholder="Select cash account"
+                options={cashAccounts.map((a) => ({ value: String(a.id), label: a.name }))}
+              />
+            </FormField>
+          )}
           <FormField label="Bank received" hint="Amount paid to bank account" error={fieldErrors.bank}>
-            <MoneyInput value={bankAmount} onChange={(e) => { setBankAmount(e.target.value); setFieldErrors((f) => ({ ...f, bank: null })); }} placeholder="0" error={fieldErrors.bank} />
+            <MoneyInput value={bankAmount} onChange={(e) => { setBankAmount(e.target.value); setFieldErrors((f) => ({ ...f, bank: null, bankAccount: null })); }} placeholder="0" error={fieldErrors.bank} />
           </FormField>
+          {bankPaisa > 0 && (
+            <FormField label="Deposit to bank account" error={fieldErrors.bankAccount}>
+              <SelectMenu
+                value={bankAccountId}
+                onChange={(v) => { setBankAccountId(v); setFieldErrors((f) => ({ ...f, bankAccount: null })); }}
+                error={fieldErrors.bankAccount}
+                placeholder="Select bank account"
+                options={[
+                  ...(bankAccounts.length > 1 ? [{ value: "", label: "Select bank account" }] : []),
+                  ...bankAccounts.map((a) => ({ value: String(a.id), label: a.name })),
+                ]}
+              />
+            </FormField>
+          )}
 
           {due > 0 && (
             <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 text-amber-700 dark:text-amber-300 text-sm font-medium">

@@ -9,7 +9,12 @@ function getById(id) {
 }
 
 function create({ name, type, balance = 0 }) {
-  const result = getDb()
+  const db = getDb();
+  if (type === "cash") {
+    const existingCash = db.prepare("SELECT id FROM accounts WHERE type = 'cash' LIMIT 1").get();
+    if (existingCash) throw new Error("Only one cash account is allowed. Add bank accounts for additional payment destinations.");
+  }
+  const result = db
     .prepare("INSERT INTO accounts (name, type, balance) VALUES (?, ?, ?)")
     .run(name, type, balance);
   logSync("accounts", result.lastInsertRowid, "upsert");
